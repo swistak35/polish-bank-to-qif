@@ -275,4 +275,6 @@ package = Heuristics::Runner.new($my_accounts, $my_heuristics).call(history)
 
 Qif::Exporter.new.export_to_file(package, export_path)
 
+puts "Finished #{package.account_name}"
+
 # TODO: maybe package step, with resulting balances?
