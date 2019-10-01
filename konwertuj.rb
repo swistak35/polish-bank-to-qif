@@ -123,7 +123,7 @@ module Heuristics
         result = run_for_one(entry)
         raise "Didnt found matching account for entry" if result.nil?
         Qif::Entry.new(
-          entry.operation_date,
+          entry.accounting_date,
           entry.amount,
           result.account,
           result.title
@@ -188,7 +188,44 @@ module Importers
           amount_number
         )
       end
-      return Importers::History.new(account_number, imported_entries)
+      return [Importers::History.new(account_number, imported_entries)]
+    end
+  end
+
+  class MilleniumBank
+    def import_from_file(csv_path)
+      lines = CSV.readlines(csv_path, col_sep: ",", encoding: "bom|UTF-8")
+      lines.shift
+
+      accounts = {}
+      lines.each do |my_account, operation_date, accounting_date, description, account, receiver, title, amount_minus, amount_plus, _balance, _currency|
+        cleaned_my_account = cleanup_account_number(my_account)
+        amount_number = if amount_minus.empty?
+          BigDecimal(amount_plus)
+        else
+          BigDecimal(amount_minus)
+        end
+
+        accounts[cleaned_my_account] ||= []
+        accounts[cleaned_my_account] << Entry.new(
+          Date.parse(operation_date),
+          Date.parse(accounting_date),
+          description,
+          title,
+          receiver,
+          cleanup_account_number(account),
+          amount_number
+        )
+      end
+
+      return accounts.map do |account_number, transactions|
+        History.new(account_number, transactions)
+      end
+    end
+
+    private
+    def cleanup_account_number(account_number)
+      account_number.gsub(/[A-Z ]/, "")
     end
   end
 end
@@ -263,18 +300,22 @@ load configuration_file
 
 importer = case ARGV[1]
   when "mbank" then Importers::Mbank.new
+  when "milleniumbank" then Importers::MilleniumBank.new
   else raise "Unknown importer"
 end
 csv_path = ARGV[2]
 export_dir = ARGV[3]
 
-history = importer.import_from_file(csv_path)
-export_path = File.join(export_dir, "#{history.account_number}.qif")
+histories = importer.import_from_file(csv_path)
 
-package = Heuristics::Runner.new($my_accounts, $my_heuristics).call(history)
+histories.each do |history|
+  package = Heuristics::Runner.new($my_accounts, $my_heuristics).call(history)
 
-Qif::Exporter.new.export_to_file(package, export_path)
+  export_path = File.join(export_dir, "#{package.account_name}.qif")
 
-puts "Finished #{package.account_name}"
+  Qif::Exporter.new.export_to_file(package, export_path)
+
+  puts "Finished #{package.account_name}"
+end
 
 # TODO: maybe package step, with resulting balances?
