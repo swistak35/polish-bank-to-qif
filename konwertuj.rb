@@ -318,4 +318,8 @@ histories.each do |history|
   puts "Finished #{package.account_name}"
 end
 
-# TODO: maybe package step, with resulting balances?
+# TODO: maybe package step, with resulting balances? - comment would be enough, but nice for reconciliation
+# TODO: split into files
+# TODO: package into gem
+# TODO: handle revolut
+# TODO: minor - dont rely on globals
