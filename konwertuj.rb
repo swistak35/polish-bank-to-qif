@@ -121,22 +121,13 @@ module Heuristics
     def call(history)
       transactions = history.entries.map do |entry|
         result = run_for_one(entry)
-        if result
-          Qif::Entry.new(
-            entry.operation_date,
-            entry.amount,
-            result.account,
-            result.title
-          )
-        else
-          heuristic_result = format_account(entry.description, entry.title, entry.receiver, entry.account, entry.amount)
-          Qif::Entry.new(
-            entry.operation_date,
-            entry.amount,
-            heuristic_result[:account],
-            heuristic_result[:description],
-          )
-        end
+        raise "Didnt found matching account for entry" if result.nil?
+        Qif::Entry.new(
+          entry.operation_date,
+          entry.amount,
+          result.account,
+          result.title
+        )
       end
       Qif::Package.new(my_accounts.fetch(history.account_number), transactions)
     end
@@ -150,9 +141,6 @@ module Heuristics
 
     attr_reader :my_accounts, :heuristics
   end
-end
-
-def format_account(description, title, receiver, account_number, amount)
 end
 
 module Importers
