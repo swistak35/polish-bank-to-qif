@@ -103,6 +103,37 @@ module Heuristics
     end
   end
 
+  class AmountAndTitleIncludeHeuristic < Heuristic
+    def initialize(amount_string, title_include_phrase, account_name)
+      @amount_string = amount_string
+      @title_include_phrase = title_include_phrase
+      @account_name = account_name
+    end
+
+    def satisfied?(entry)
+      entry.title.include?(@title_include_phrase) && entry.amount === BigDecimal(@amount_string)
+    end
+
+    def result_account(_entry)
+      @account_name
+    end
+  end
+
+  class TitleIncludeHeuristic < Heuristic
+    def initialize(title_include_phrase, account_name)
+      @title_include_phrase = title_include_phrase
+      @account_name = account_name
+    end
+
+    def satisfied?(entry)
+      entry.title.include?(@title_include_phrase)
+    end
+
+    def result_account(_entry)
+      @account_name
+    end
+  end
+
   class Result
     def initialize(account, title)
       @account = account
